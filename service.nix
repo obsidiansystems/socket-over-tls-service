@@ -19,12 +19,12 @@ with pkgs.lib;
     #     The file owner should be `cfg.user`
     #     with `chmod 600` permissions.
     serverSecretPemFile = mkOption {
-      type = types.str;
+      type = types.path;
     };
 
     # Client certificate including client public key.
     clientPublicCrtFile = mkOption {
-      type = types.str;
+      type = types.path;
     };
 
     # The Unix domain socket file to forward
@@ -45,7 +45,7 @@ with pkgs.lib;
       wants = [ "network-online.target" ];
       restartIfChanged = true;
       script = ''
-        ${pkgs.socat}/bin/socat openssl-listen:${cfg.listenPort},reuseaddr,fork,cert=${cfg.serverSecretPemFile},cafile=${cfg.clientPublicCrtFile},verify=1,openssl-min-proto-version=TLS1.3 UNIX-CONNECT:${cfg.socketFile}
+        ${pkgs.socat}/bin/socat openssl-listen:${toString cfg.listenPort},reuseaddr,fork,cert=${toString cfg.serverSecretPemFile},cafile=${toString cfg.clientPublicCrtFile},verify=1,openssl-min-proto-version=TLS1.3 UNIX-CONNECT:${cfg.socketFile}
       '';
       serviceConfig = {
         User = cfg.user;
