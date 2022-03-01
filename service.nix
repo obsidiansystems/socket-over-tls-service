@@ -47,19 +47,13 @@ with pkgs.lib;
       script = ''
         #!${pkgs.runtimeShell}
 
-        set -e
-
         SERVER_PEM="${toString cfg.serverSecretPemFile}"
         CLIENT_CRT="${toString cfg.clientPublicCrtFile}"
 
         echo "socket-over-tls-service: running on port ${toString cfg.listenPort}..."
         echo "   Server PEM: $SERVER_PEM"
         echo "   Client CRT: $CLIENT_CRT"
-
-        # DEBUG
-        ls "$SERVER_PEM"
-        ls "$CLIENT_CRT"
-
+        
         ${pkgs.socat}/bin/socat openssl-listen:${toString cfg.listenPort},reuseaddr,fork,cert=$SERVER_PEM,cafile=$CLIENT_CRT,verify=1,openssl-min-proto-version=TLS1.3 UNIX-CONNECT:${cfg.socketFile}
       '';
       serviceConfig = {
