@@ -10,13 +10,17 @@ let
   username      = "authenticator";
   password      = "mysecretpassword";
   webRole       = "web_anon";
+
   port = 9186;
+  socketFile = "/home/socket-forward/forward.socket";
+  socketUser = "socket-forward";
+
+  certs = ./cert;
 
   # NixOS module shared between server and client
   sharedModule = {
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
     virtualisation.graphics = false;
-    certs = ./cert;
   };
 
 in pkgs.nixosTest ({
@@ -25,32 +29,20 @@ in pkgs.nixosTest ({
 
   nodes = {
     server = { config, pkgs, ... }: {
-      imports = [ sharedModule ];
+      imports = [
+        sharedModule
+        ./service.nix
+      ];
 
       networking.firewall.allowedTCPPorts = [ port ];
 
-      services.postgresql = {
+      services.socket-over-tls = {
         enable = true;
-
-        initialScript = pkgs.writeText "initialScript.sql" ''
-          create schema ${schema};
-
-          create table ${schema}.${table} (
-              id serial primary key,
-              done boolean not null default false,
-              task text not null,
-              due timestamptz
-          );
-
-          insert into ${schema}.${table} (task) values ('finish tutorial 0'), ('pat self on back');
-
-          create role ${webRole} nologin;
-          grant usage on schema ${schema} to ${webRole};
-          grant select on ${schema}.${table} to ${webRole};
-
-          create role ${username} inherit login password '${password}';
-          grant ${webRole} to ${username};
-        '';
+        user = "socket-forward";
+        serverSecretPemFile = certs/server.pem;
+        clientPublicCrtFile = certs/client.crt;
+        socketFile = socketFile;
+        listenPort = 9186;
       };
 
       users = {
@@ -63,21 +55,20 @@ in pkgs.nixosTest ({
           # can use peer authentication.  The tutorial defines a password,
           # but it's not necessary.
           "${username}".isSystemUser = true;
+
+          socket-forward = {
+            isNormalUser = true;
+            home = "/home/socket-forward";
+            group = "socket-forward";
+          };
         };
       };
 
-      systemd.services.postgrest = {
+      systemd.services.netcat = {
         wantedBy = [ "multi-user.target" ];
-        after = [ "postgresql.service" ];
-        script =
-          let
-            configuration = pkgs.writeText "tutorial.conf" ''
-                db-uri = "postgres://${username}:${password}@localhost:${toString config.services.postgresql.port}/${database}"
-                db-schema = "${schema}"
-                db-anon-role = "${username}"
-            '';
-          in "${pkgs.haskellPackages.postgrest}/bin/postgrest ${configuration}";
-        serviceConfig.User = username;
+        after = [ "socket-over-tls.service" ];
+        script = "${pkgs.netcat}/bin/nc -lkU ${socketFile}";
+        serviceConfig.User = socketUser;
       };
     };
 
@@ -90,26 +81,12 @@ in pkgs.nixosTest ({
   skipLint = true;
 
   testScript = ''
-    import json
-    import sys
+    #!${pkgs.runtimeShell}
 
-    SERVER_HOST=localhost socat UNIX-LISTEN:client.sock,reuseaddr,fork openssl:$SERVER_HOST:9186,cert=client.pem,cafile=server.crt,openssl-min-proto-version=TLS1.3
+    export SERVER_HOST=server
 
-    start_all()
+    socat STDOUT openssl:$SERVER_HOST:${port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3 | tee hey.log
 
-    server.wait_for_open_port(${toString port})
-
-    expected = [
-        {"id": 1, "done": False, "task": "finish tutorial 0", "due": None},
-        {"id": 2, "done": False, "task": "pat self on back", "due": None},
-    ]
-
-    actual = json.loads(
-        client.succeed(
-            "${pkgs.curl}/bin/curl http://server:${toString port}/${table}"
-        )
-    )
-
-    assert expected == actual, "table query returns expected content"
+    echo hey.log
   '';
 })
