@@ -92,7 +92,7 @@ in pkgs.nixosTest ({
 
     subprocess.run(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
-    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-lkU", "${socketFile}"], capture_output=True, text=True)
+    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-lU", "${socketFile}"], capture_output=True, text=True)
 
     assert result.stdout == "test 123", "what does this string do, I don't know"
   '';
