@@ -85,7 +85,7 @@ in pkgs.nixosTest ({
 
     export SERVER_HOST=server
 
-    socat STDOUT openssl:$SERVER_HOST:${port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3 | tee hey.log
+    socat STDOUT openssl:$SERVER_HOST:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3 | tee hey.log
 
     echo hey.log
   '';
