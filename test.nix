@@ -14,6 +14,7 @@ let
   port = 9186;
   socketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
+  serverMessage = "test 123";
 
   certs = pkgs.stdenv.mkDerivation {
     name = "test-certs";
@@ -79,14 +80,7 @@ in pkgs.nixosTest ({
       systemd.services.netcat = {
         wantedBy = [ "multi-user.target" ];
         after = [ "socket-over-tls.service" ];
-        script = "${pkgs.netcat}/bin/nc -lkU ${socketFile}";
-        serviceConfig.User = socketUser;
-      };
-
-      systemd.services.socket-write = {
-        wantedBy = [ "multi-user.target" ];
-        after = [ "netcat.service" ];
-        script = "echo 'test 123' |${pkgs.netcat}/bin/nc -U ${socketFile}";
+        script = "echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lkU ${socketFile}";
         serviceConfig.User = socketUser;
       };
     };
@@ -102,9 +96,9 @@ in pkgs.nixosTest ({
     subprocess.run(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
     print("Running nc...")
-    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-lU", "${socketFile}"], capture_output=True, text=True)
+    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-U", "client.sock"], capture_output=True, text=True)
 
     print("Running assertion...")
-    assert result.stdout == "test 123", "what does this string do, I don't know"
+    assert result.stdout == "${serverMessage}", "client receives correct message"
   '';
 })
