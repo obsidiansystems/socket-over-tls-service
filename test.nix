@@ -15,8 +15,22 @@ let
   socketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
 
-  certs = ./cert;
+  certs = pkgs.stdenv.mkDerivation {
+    name = "test-certs";
 
+    buildInputs = [ pkgs.openssl ];
+
+    # unpackPhase = "true";
+
+    # preferLocalBuild = true;
+
+    installPhase =
+      ''
+        mkdir -p $out
+        cp -r ${./cert} $out/
+      '';
+  };
+  
   # NixOS module shared between server and client
   sharedModule = {
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
