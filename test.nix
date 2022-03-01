@@ -70,6 +70,13 @@ in pkgs.nixosTest ({
         script = "${pkgs.netcat}/bin/nc -lkU ${socketFile}";
         serviceConfig.User = socketUser;
       };
+
+      systemd.services.socket-write = {
+        wantedBy = [ "multi-user.target" ];
+        after = [ "netcat.service" ];
+        script = "echo 'test 123' |${pkgs.netcat}/bin/nc -U ${socketFile}";
+        serviceConfig.User = socketUser;
+      };
     };
 
     client = {
@@ -81,12 +88,12 @@ in pkgs.nixosTest ({
   skipLint = true;
 
   testScript = ''
-    #!${pkgs.runtimeShell}
+    import subprocess
 
-    export SERVER_HOST=server
+    subprocess.run(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
-    socat STDOUT openssl:$SERVER_HOST:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3 | tee hey.log
+    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-lkU", "${socketFile}"], capture_output=True, text=True)
 
-    echo hey.log
+    assert result.stdout == "test 123", "what does this string do, I don't know"
   '';
 })
