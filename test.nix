@@ -90,10 +90,13 @@ in pkgs.nixosTest ({
   testScript = ''
     import subprocess
 
+    print("Running socat...")
     subprocess.run(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
+    print("Running nc...")
     result = subprocess.run(["${pkgs.netcat}/bin/nc", "-lU", "${socketFile}"], capture_output=True, text=True)
 
+    print("Running assertion...")
     assert result.stdout == "test 123", "what does this string do, I don't know"
   '';
 })
