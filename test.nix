@@ -20,14 +20,12 @@ let
 
     buildInputs = [ pkgs.openssl ];
 
-    # unpackPhase = "true";
-
-    # preferLocalBuild = true;
+    src = ./cert;
 
     installPhase =
       ''
         mkdir -p $out
-        cp -r ${./cert} $out/
+        cp -r $src/* $out/
       '';
   };
 
