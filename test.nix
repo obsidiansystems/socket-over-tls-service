@@ -20,7 +20,7 @@ let
 
     buildInputs = [ pkgs.openssl ];
 
-    src = ./cert;
+    src = ./certs;
 
     installPhase =
       ''
@@ -51,8 +51,8 @@ in pkgs.nixosTest ({
       services.socket-over-tls = {
         enable = true;
         user = "socket-forward";
-        serverSecretPemFile = certs/server.pem;
-        clientPublicCrtFile = certs/client.crt;
+        serverSecretPemFile = certs + "/server.pem";
+        clientPublicCrtFile = certs + "/client.crt";
         socketFile = socketFile;
         listenPort = 9186;
       };
