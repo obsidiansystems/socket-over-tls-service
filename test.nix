@@ -93,7 +93,7 @@ in pkgs.nixosTest ({
     import subprocess
 
     print("Running socat...")
-    subprocess.run(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
+    subprocess.Popen(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
     print("Running nc...")
     result = subprocess.run(["${pkgs.netcat}/bin/nc", "-U", "client.sock"], capture_output=True, text=True)
