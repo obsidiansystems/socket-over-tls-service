@@ -22,7 +22,7 @@ let
 
     buildInputs = [ pkgs.openssl ];
 
-    src = ./certs;
+    src = ./test/data/cert;
 
     installPhase =
       ''
