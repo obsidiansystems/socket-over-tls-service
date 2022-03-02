@@ -96,7 +96,7 @@ in pkgs.nixosTest ({
       assert actual == expected, msg
 
     start_all()
-    server.execute("${pkgs.netcat}/bin/nc -lU ${serverSocketFile} 2> netcat.log >&2 &")
+    server.execute("sudo -u socket-forward ${pkgs.netcat}/bin/nc -lU ${serverSocketFile} 2> netcat.log >&2 &")
     server.succeed("echo $! > netcat.pid")
     server.wait_for_file("${serverSocketFile}")
     server.wait_for_open_port(${toString port})
