@@ -98,6 +98,7 @@ in pkgs.nixosTest ({
   testScript = ''
     import subprocess
 
+    start_all()
     server.wait_for_open_port(${toString port})
 
     print("Running socat...")
