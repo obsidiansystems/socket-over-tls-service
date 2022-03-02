@@ -92,6 +92,8 @@ in pkgs.nixosTest ({
   testScript = ''
     import subprocess
 
+    server.wait_for_open_port(${toString port})
+
     print("Running socat...")
     subprocess.Popen(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
 
