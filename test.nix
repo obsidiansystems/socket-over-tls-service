@@ -96,7 +96,9 @@ in pkgs.nixosTest ({
       assert actual == expected, msg
 
     start_all()
-    server.succeed("${pkgs.netcat}/bin/nc -U ${serverSocketFile}")
+    server.execute("${pkgs.netcat}/bin/nc -lU ${serverSocketFile} 2> netcat.log >&2 &")
+    server.succeed("echo $! > netcat.pid")
+    server.wait_for_file("${serverSocketFile}")
     server.wait_for_open_port(${toString port})
 
     print("Running socat...")
@@ -105,9 +107,10 @@ in pkgs.nixosTest ({
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
     client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
-    stdout = server.succeed("${pkgs.netcat}/bin/nc -lU ${serverSocketFile}")
+    server.succeed("wait $(cat netcat.pid)")
+    stdout = server.succeed("cat netcat.log")
 
     print("Running assertions...")
-    expect(stdout, "${message}", "client receives correct message")
+    expect(stdout, "${message}", "server receives correct message")
   '';
 })
