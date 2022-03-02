@@ -14,7 +14,7 @@ let
   port = 9186;
   socketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
-  serverMessage = "test 123";
+  message = "test 123";
   clientSocketFile = "client.sock";
 
   certs = pkgs.stdenv.mkDerivation {
@@ -97,17 +97,16 @@ in pkgs.nixosTest ({
 
     start_all()
     server.wait_for_open_port(${toString port})
-    server.wait_for_file("${socketFile}")
 
     print("Running socat...")
     client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs + "/client.pem"},cafile=${certs + "/server.crt"},openssl-min-proto-version=TLS1.3 2> socat.log >&2 &")
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
-    server.succeed("echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lU ${socketFile}")
-    stdout = client.succeed("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
+    client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
+    stdout = server.succeed("${pkgs.netcat}/bin/nc -lU ${socketFile}")
 
     print("Running assertions...")
-    expect(stdout, "${serverMessage}", "client receives correct message")
+    expect(stdout, "${message}", "client receives correct message")
   '';
 })
