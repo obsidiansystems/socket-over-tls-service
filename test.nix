@@ -82,7 +82,7 @@ in pkgs.nixosTest ({
       systemd.services.netcat = {
         wantedBy = [ "multi-user.target" ];
         after = [ "socket-over-tls.service" ];
-        script = "echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lkU ${socketFile}";
+        script = "echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lU ${socketFile}";
         serviceConfig.User = socketUser;
       };
     };
@@ -104,6 +104,7 @@ in pkgs.nixosTest ({
 
     start_all()
     server.wait_for_open_port(${toString port})
+    server.wait_for_file("${socketFile}")
 
     print("Running socat...")
     client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs + "/client.pem"},cafile=${certs + "/server.crt"},openssl-min-proto-version=TLS1.3 2> socat.log >&2 &")
