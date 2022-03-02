@@ -98,6 +98,10 @@ in pkgs.nixosTest ({
   testScript = ''
     import subprocess
 
+    def expect(actual, expected, message):
+      msg='{} (actual: {}, expected: {})'.format(message, actual, expected)
+      assert actual == expected, msg
+
     start_all()
     server.wait_for_open_port(${toString port})
 
@@ -109,7 +113,7 @@ in pkgs.nixosTest ({
     status, stdout = client.execute("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
     print("Running assertions...")
-    assert status == 0, "netcat returns success"
-    assert stdout == "${serverMessage}", "client receives correct message"
+    expect(status, 0, "netcat returns success")
+    expect(stdout, "${serverMessage}", "client receives correct message")
   '';
 })
