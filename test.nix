@@ -70,6 +70,7 @@ in pkgs.nixosTest ({
           # but it's not necessary.
           "${username}".isSystemUser = true;
 
+          
           socket-forward = {
             isNormalUser = true;
             home = "/home/socket-forward";
