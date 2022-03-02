@@ -70,7 +70,7 @@ in pkgs.nixosTest ({
           # but it's not necessary.
           "${username}".isSystemUser = true;
 
-          
+
           socket-forward = {
             isNormalUser = true;
             home = "/home/socket-forward";
@@ -101,7 +101,7 @@ in pkgs.nixosTest ({
     server.wait_for_open_port(${toString port})
 
     print("Running socat...")
-    client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs + "/client.pem"},cafile=${certs + "/server.crt"},openssl-min-proto-version=TLS1.3 2>&1 > socat.log")
+    client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs + "/client.pem"},cafile=${certs + "/server.crt"},openssl-min-proto-version=TLS1.3 2> socat.log >&2")
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
