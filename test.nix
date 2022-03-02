@@ -111,7 +111,7 @@ in pkgs.nixosTest ({
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
-    stdout = client.success("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
+    stdout = client.succeed("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
     print("Running assertions...")
     expect(stdout, "${serverMessage}", "client receives correct message")
