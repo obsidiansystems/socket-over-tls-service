@@ -78,13 +78,6 @@ in pkgs.nixosTest ({
           };
         };
       };
-
-      systemd.services.netcat = {
-        wantedBy = [ "multi-user.target" ];
-        after = [ "socket-over-tls.service" ];
-        script = "echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lU ${socketFile}";
-        serviceConfig.User = socketUser;
-      };
     };
 
     client = {
@@ -111,6 +104,7 @@ in pkgs.nixosTest ({
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
+    server.succeed("echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lU ${socketFile}")
     stdout = client.succeed("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
     print("Running assertions...")
