@@ -15,6 +15,7 @@ let
   socketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
   serverMessage = "test 123";
+  clientSocketFile = "client.sock";
 
   certs = pkgs.stdenv.mkDerivation {
     name = "test-certs";
@@ -29,7 +30,7 @@ let
         cp -r $src/* $out/
       '';
   };
-  
+
   # NixOS module shared between server and client
   sharedModule = {
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
@@ -99,12 +100,14 @@ in pkgs.nixosTest ({
     server.wait_for_open_port(${toString port})
 
     print("Running socat...")
-    subprocess.Popen(["${pkgs.socat}/bin/socat", "UNIX-LISTEN:client.sock,reuseaddr,fork", "openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3"])
+    client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs/client.pem},cafile=${certs/server.crt},openssl-min-proto-version=TLS1.3 2>&1 > socat.log")
 
     print("Running nc...")
-    result = subprocess.run(["${pkgs.netcat}/bin/nc", "-U", "client.sock"], capture_output=True, text=True)
+    client.wait_for_file("${clientSocketFile}")
+    status, stdout = client.execute("${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
-    print("Running assertion...")
-    assert result.stdout == "${serverMessage}", "client receives correct message"
+    print("Running assertions...")
+    assert status == 0, "netcat returns success"
+    assert stdout == "${serverMessage}", "client receives correct message"
   '';
 })
