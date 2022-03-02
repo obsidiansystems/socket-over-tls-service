@@ -12,7 +12,7 @@ let
   webRole       = "web_anon";
 
   port = 9186;
-  socketFile = "/home/socket-forward/forward.socket";
+  serverSocketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
   message = "test 123";
   clientSocketFile = "client.sock";
@@ -55,7 +55,7 @@ in pkgs.nixosTest ({
         user = "socket-forward";
         serverSecretPemFile = certs + "/server.pem";
         clientPublicCrtFile = certs + "/client.crt";
-        socketFile = socketFile;
+        socketFile = serverSocketFile;
         listenPort = 9186;
       };
 
@@ -96,6 +96,7 @@ in pkgs.nixosTest ({
       assert actual == expected, msg
 
     start_all()
+    server.succeed("${pkgs.netcat}/bin/nc -U ${serverSocketFile}")
     server.wait_for_open_port(${toString port})
 
     print("Running socat...")
@@ -104,7 +105,7 @@ in pkgs.nixosTest ({
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
     client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
-    stdout = server.succeed("${pkgs.netcat}/bin/nc -lU ${socketFile}")
+    stdout = server.succeed("${pkgs.netcat}/bin/nc -lU ${serverSocketFile}")
 
     print("Running assertions...")
     expect(stdout, "${message}", "client receives correct message")
