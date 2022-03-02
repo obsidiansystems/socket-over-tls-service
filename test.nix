@@ -29,7 +29,7 @@ let
         cp -r $src/* $out/
       '';
   };
-
+  
   # NixOS module shared between server and client
   sharedModule = {
     # Since it's common for CI not to have $DISPLAY available, we have to explicitly tell the tests "please don't expect any screen available"
@@ -83,6 +83,10 @@ in pkgs.nixosTest ({
         script = "echo '${serverMessage}' |${pkgs.netcat}/bin/nc -lkU ${socketFile}";
         serviceConfig.User = socketUser;
       };
+    };
+
+    client = {
+      imports = [ sharedModule ];
     };
   };
 
