@@ -2,12 +2,14 @@
 let
   nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/0f8f64b54ed07966b83db2f20c888d5e035012ef.tar.gz";
   pkgs = import nixpkgs {};
+  client = import ./client.nix;
 
   port = 9186;
   serverSocketFile = "/home/socket-forward/forward.socket";
   socketUser = "socket-forward";
   message = "test 123";
-  clientSocketFile = "client.sock";
+  clientHome = "/home/socket-client";
+  clientSocketFile = clientHome + "/client.sock";
 
   # TODO: generate certificates using 'test_gen_certs.sh' as part of 'buildPhase'
   certs = pkgs.stdenv.mkDerivation {
@@ -67,7 +69,43 @@ in pkgs.nixosTest ({
     };
 
     client = {
-      imports = [ sharedModule ];
+      imports = [
+        sharedModule
+      ];
+
+      users = {
+        mutableUsers = false;
+        users = {
+          # For ease of debugging the VM as the `root` user
+          root.password = "";
+
+          # The user who runs the 'socket-over-tls' service
+          socket-client = {
+            isNormalUser = true;
+            home = clientHome;
+            group = "socket-client";
+          };
+        };
+      };
+
+      systemd.services.socket-client = {
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        restartIfChanged = true;
+        script = ''
+          #!${pkgs.runtimeShell}
+
+          ${client.cardano-socket-forward}/bin/cardano-socket-forward server ${port} ${clientSocketFile} ${certs + "/client.pem"}
+        '';
+        serviceConfig = {
+          User = "socket-client";
+          WorkingDirectory = clientHome;
+          Restart = "always";
+          RestartSec = 1;
+        };
+      };
+
     };
   };
 
@@ -86,9 +124,6 @@ in pkgs.nixosTest ({
     server.succeed("echo $! > netcat.pid")
     server.wait_for_file("${serverSocketFile}")
     server.wait_for_open_port(${toString port})
-
-    print("Running socat...")
-    client.execute("${pkgs.socat}/bin/socat UNIX-LISTEN:${clientSocketFile},reuseaddr,fork openssl:server:${toString port},cert=${certs + "/client.pem"},cafile=${certs + "/server.crt"},openssl-min-proto-version=TLS1.3 2> socat.log >&2 &")
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
