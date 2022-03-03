@@ -108,6 +108,9 @@ in pkgs.nixosTest ({
     client.wait_for_file("${clientSocketFile}")
     client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
     server.succeed("wait $(cat netcat.pid)")
-    server.succeed("cat netcat.log |grep '${message}'");
+    stdout = server.succeed("cat netcat.log")
+
+    print("Running assertions...")
+    expect(stdout, "${message}", "server receives correct message")
   '';
 })
