@@ -1,15 +1,7 @@
+# Based on: https://nix.dev/tutorials/integration-testing-using-virtual-machines
 let
-  # Pin nixpkgs, see pinning tutorial for more details
   nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/0f8f64b54ed07966b83db2f20c888d5e035012ef.tar.gz";
   pkgs = import nixpkgs {};
-
-  # Single source of truth for all tutorial constants
-  database      = "postgres";
-  schema        = "api";
-  table         = "todos";
-  username      = "authenticator";
-  password      = "mysecretpassword";
-  webRole       = "web_anon";
 
   port = 9186;
   serverSocketFile = "/home/socket-forward/forward.socket";
@@ -17,13 +9,11 @@ let
   message = "test 123";
   clientSocketFile = "client.sock";
 
+  # TODO: generate certificates using 'test_gen_certs.sh' as part of 'buildPhase'
   certs = pkgs.stdenv.mkDerivation {
     name = "test-certs";
-
     buildInputs = [ pkgs.openssl ];
-
     src = ./test/data/cert;
-
     installPhase =
       ''
         mkdir -p $out
@@ -50,6 +40,7 @@ in pkgs.nixosTest ({
 
       networking.firewall.allowedTCPPorts = [ port ];
 
+      # Enable and configure 'socket-over-tls' NixOS service
       services.socket-over-tls = {
         enable = true;
         user = "socket-forward";
@@ -65,12 +56,7 @@ in pkgs.nixosTest ({
           # For ease of debugging the VM as the `root` user
           root.password = "";
 
-          # Create a system user that matches the database user so that we
-          # can use peer authentication.  The tutorial defines a password,
-          # but it's not necessary.
-          "${username}".isSystemUser = true;
-
-
+          # The user who runs the 'socket-over-tls' service
           socket-forward = {
             isNormalUser = true;
             home = "/home/socket-forward";
