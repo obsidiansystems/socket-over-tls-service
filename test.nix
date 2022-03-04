@@ -2,7 +2,7 @@
 let
   nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/0f8f64b54ed07966b83db2f20c888d5e035012ef.tar.gz";
   pkgs = import nixpkgs {};
-  client = import ./client.nix;
+  client = import ./client.nix {pkgs = pkgs; serverCertFile = serverCertFile;};
 
   port = 9186;
   serverSocketFile = "/home/socket-forward/forward.socket";
@@ -115,7 +115,7 @@ in pkgs.nixosTest ({
         script = ''
           #!${pkgs.runtimeShell}
 
-          ${client.socket-forward-client {pkgs = pkgs; serverCertFile = serverCertFile;}}/bin/cardano-socket-forward server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
+          ${client.socket-forward-client}/bin/cardano-socket-forward server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
         '';
         serviceConfig = {
           User = "socket-client";
