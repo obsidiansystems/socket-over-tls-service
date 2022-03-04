@@ -11,6 +11,7 @@ let
   clientHome = "/home/socket-client";
   clientSocketFile = clientHome + "/client.sock";
 
+  serverCertFile = certs + "/server.crt";
   # TODO: generate certificates using 'test_gen_certs.sh' as part of 'buildPhase'
   certs = pkgs.stdenv.mkDerivation {
     name = "test-certs";
@@ -50,6 +51,24 @@ in pkgs.nixosTest ({
         clientPublicCrtFile = certs + "/client.crt";
         socketFile = serverSocketFile;
         listenPort = 9186;
+      };
+
+      # Write to the socket whatever is read from it
+      services.echo-socket = {
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        restartIfChanged = true;
+        script = ''
+          #!${pkgs.runtimeShell}
+
+          ${pkgs.socat}/bin/socat UNIX-LISTEN:${serverSocketFile},reuseaddr,fork exec:'cat'
+        '';
+        serviceConfig = {
+          User = "socket-forward";
+          Restart = "always";
+          RestartSec = 1;
+        };
       };
 
       users = {
@@ -96,7 +115,7 @@ in pkgs.nixosTest ({
         script = ''
           #!${pkgs.runtimeShell}
 
-          ${client.cardano-socket-forward}/bin/cardano-socket-forward server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
+          ${client.socket-forward-client {pkgs = pkgs; serverCertFile = serverCertFile;}}/bin/cardano-socket-forward server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
         '';
         serviceConfig = {
           User = "socket-client";
@@ -120,16 +139,12 @@ in pkgs.nixosTest ({
       assert actual == expected, msg
 
     start_all()
-    server.execute("sudo -u socket-forward ${pkgs.netcat}/bin/nc -lU ${serverSocketFile} 2> netcat.log >&2 &")
-    server.succeed("echo $! > netcat.pid")
     server.wait_for_file("${serverSocketFile}")
     server.wait_for_open_port(${toString port})
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
-    client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
-    server.succeed("wait $(cat netcat.pid)")
-    stdout = server.succeed("cat netcat.log")
+    stdout = client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
     print("Running assertions...")
     expect(stdout, "${message}", "server receives correct message")
