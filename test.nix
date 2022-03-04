@@ -54,7 +54,7 @@ in pkgs.nixosTest ({
       };
 
       # Write to the socket whatever is read from it
-      services.echo-socket = {
+      systemd.services.echo-socket = {
         wantedBy = [ "multi-user.target" ];
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
