@@ -115,7 +115,7 @@ in pkgs.nixosTest ({
         script = ''
           #!${pkgs.runtimeShell}
 
-          ${client.socket-forward-client}/bin/cardano-socket-forward server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
+          ${client.socket-forward-client}/bin/socket-forward-client server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
         '';
         serviceConfig = {
           User = "socket-client";
