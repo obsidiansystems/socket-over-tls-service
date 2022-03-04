@@ -1,21 +1,9 @@
-let
-  nixpkgs = fetchTarball "https://github.com/NixOS/nixpkgs/archive/0f8f64b54ed07966b83db2f20c888d5e035012ef.tar.gz";
-  pkgs = import nixpkgs {};
-
-  serverCertFile = serverCert + "/server.crt";
-  serverCert = pkgs.stdenv.mkDerivation {
-    name = "server-cert";
-    buildInputs = [ pkgs.openssl ];
-    src = ./test/data/cert;
-    installPhase =
-      ''
-        mkdir -p $out
-        cp $src/server.crt $out/
-      '';
-  };
-in {
-  # Forward read/writes to the given socket file to a server over TLS
-  cardano-socket-forward = pkgs.writeScriptBin "cardano-socket-forward" ''
+{ pkgs ? import ./dep/nixpkgs {}
+, serverCertFile ? ./test/data/cert/server.crt
+}:
+{
+  # Client script for connecting to the NixOS service defined in 'service.nix'
+  socket-forward-client = pkgs.writeScriptBin "socket-forward-client" ''
     #!${pkgs.runtimeShell}
 
     # Script takes 4 arguments
@@ -32,6 +20,6 @@ in {
     SERVER_PUBLIC_CERT_FILE=${serverCertFile}
 
     echo "Forwarding $SOCKET_FILE to $SERVER_HOST:$SERVER_PORT..." >&2
-    ${pkgs.socat}/bin/socat UNIX-LISTEN:$SOCKET_FILE,reuseaddr,fork openssl:$SERVER_HOST:$SERVER_PORT,cert=$CLIENT_PRIVATE_PEM_FILE,cafile=$SERVER_PUBLIC_CERT_FILE,openssl-min-proto-version=TLS1.3
+    ${pkgs.socat}/bin/socat UNIX-LISTEN:$SOCKET_FILE,reuseaddr,fork openssl:$SERVER_HOST:$SERVER_PORT,cert="$CLIENT_PRIVATE_PEM_FILE",cafile="$SERVER_PUBLIC_CERT_FILE",openssl-min-proto-version=TLS1.3
   '';
 }
