@@ -10,6 +10,7 @@ let
   message = "test 123";
   clientHome = "/home/socket-client";
   clientSocketFile = clientHome + "/client.sock";
+  clientSocketUser = "socket-client";
 
   serverCertFile = certs + "/server.crt";
   # TODO: generate certificates using 'test_gen_certs.sh' as part of 'buildPhase'
@@ -118,7 +119,7 @@ in pkgs.nixosTest ({
           ${client.socket-forward-client}/bin/socket-forward-client server ${toString port} ${clientSocketFile} ${certs + "/client.pem"}
         '';
         serviceConfig = {
-          User = "socket-client";
+          User = clientSocketUser;
           WorkingDirectory = clientHome;
           Restart = "always";
           RestartSec = 1;
@@ -144,7 +145,7 @@ in pkgs.nixosTest ({
 
     print("Running nc...")
     client.wait_for_file("${clientSocketFile}")
-    stdout = client.succeed("echo '${message}' |${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
+    stdout = client.succeed("echo '${message}' |sudo -u ${clientSocketUser} ${pkgs.netcat}/bin/nc -U ${clientSocketFile}")
 
     print("Running assertions...")
     expect(stdout, "${message}", "server receives correct message")
