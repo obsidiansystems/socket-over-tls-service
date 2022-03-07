@@ -1,0 +1,22 @@
+name: Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v14
+        with: # https://github.com/cachix/install-nix-action#how-can-i-run-nixos-tests
+          extra_nix_config: "system-features = nixos-test benchmark big-parallel kvm"
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run test
+        run: nix-build test/test.nix
