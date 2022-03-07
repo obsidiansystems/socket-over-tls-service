@@ -39,7 +39,7 @@ in pkgs.nixosTest ({
     server = { config, pkgs, ... }: {
       imports = [
         sharedModule
-        ./service.nix
+        ../service.nix
       ];
 
       networking.firewall.allowedTCPPorts = [ port ];
