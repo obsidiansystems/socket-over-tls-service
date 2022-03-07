@@ -99,11 +99,10 @@ in pkgs.nixosTest ({
           # For ease of debugging the VM as the `root` user
           root.password = "";
 
-          # The user who runs the 'socket-over-tls' service
-          socket-client = {
+          "${clientSocketUser}" = {
             isNormalUser = true;
             home = clientHome;
-            group = "socket-client";
+            group = clientSocketUser;
           };
         };
       };
