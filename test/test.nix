@@ -17,7 +17,7 @@ let
   certs = pkgs.stdenv.mkDerivation {
     name = "test-certs";
     buildInputs = [ pkgs.openssl ];
-    src = ./test/data/cert;
+    src = ./data/cert;
     installPhase =
       ''
         mkdir -p $out
