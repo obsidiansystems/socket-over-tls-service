@@ -1,5 +1,3 @@
-#!/bin/bash
-
 set -e
 
 SERVER_HOST=localhost
